@@ -8,7 +8,7 @@ class MainCLI():
         result = subprocess.run(['ps', '-arcxo', 'pid,command,time'], stdout=subprocess.PIPE)
         lines = result.stdout.decode().split('\n')[1:12]
         for line in lines:
-            parts = line.strip().split(maxsplit=1)
+            parts = line.strip().split(maxsplit=2)
             if len(parts) == 2:
                 pid, name = parts
                 self.processes.append((name, pid))
