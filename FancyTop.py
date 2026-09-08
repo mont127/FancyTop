@@ -6,7 +6,7 @@ class MainCLI():
     
     def get_top_processes(self):
         result = subprocess.run(['ps', '-arcxo', 'pid,command'], stdout=subprocess.PIPE)
-        lines = result.stdout.decode().split('\n')[1:80]
+        lines = result.stdout.decode().split('\n')[1:12]
         for line in lines:
             parts = line.strip().split(maxsplit=1)
             if len(parts) == 2:
