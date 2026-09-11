@@ -5,6 +5,6 @@ build/
 dist/
 wheels/
 *.egg-info
-
+terminaloutput.py
 # Virtual environments
 .venv

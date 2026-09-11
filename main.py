@@ -12,7 +12,7 @@ def main():
             app.get_top_processes()
             app.display_processes()
             app.clear_processes()
-            time.sleep(2)  
+            time.sleep(0.3)  
         except KeyboardInterrupt:
             print("Exiting FancyTop...")
             break

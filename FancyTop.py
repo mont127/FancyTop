@@ -4,10 +4,17 @@ import shutil
 class MainCLI():
     def __init__(self):
         self.processes = []
+
+    def get_terminal_size(self):
+        size = shutil.get_terminal_size()
+        return size.columns, size.lines
+    
+
     
     def get_top_processes(self):
         result = subprocess.run(['ps', '-arcxo', 'pid,command,time'], stdout=subprocess.PIPE)
-        lines = result.stdout.decode().split('\n')[1:15]
+        cols, size = self.get_terminal_size()
+        lines = result.stdout.decode().split('\n')[1:size-2] 
         for line in lines:
             parts = line.strip().split(maxsplit=1)
             if len(parts) != 2:
@@ -17,9 +24,6 @@ class MainCLI():
             if name:
                 self.processes.append((name.strip(), pid, time))
 
-    def get_terminal_size(self):
-        size = shutil.get_terminal_size()
-        return size.columns, size.lines
 
     def display_processes(self):
         if not self.processes:
