@@ -1,5 +1,14 @@
-import subprocess 
+import subprocess
 import shutil
+
+RED    = "\033[31m"
+GREEN  = "\033[32m"
+YELLOW = "\033[33m"
+BLUE   = "\033[34m"
+CYAN   = "\033[36m"
+BOLD   = "\033[1m"
+DIM    = "\033[2m"
+RESET  = "\033[0m"
 
 class MainCLI():
     def __init__(self):
@@ -27,7 +36,7 @@ class MainCLI():
 
     def display_processes(self):
         if not self.processes:
-            print("Top Processes:  (none)")
+            print(f"{BOLD}Top Processes:{RESET}  {DIM}(none){RESET}")
             return
         cols, lines = self.get_terminal_size()
         rank_w = max(3, len(str(len(self.processes))))
@@ -35,13 +44,14 @@ class MainCLI():
         time_w = 10
         name_w = max(20, cols - (8 + rank_w + pid_w + time_w))
         
-        print(f"Top Processes ({len(self.processes)})")
-        print(f"  {'#':>{rank_w}}  {'PID':>{pid_w}}  {'PROCESS':<{name_w}}  {'TIME':>{time_w}}")
-        print(f"  {'-' * rank_w}  {'-' * pid_w}  {'-' * name_w}  {'-' * time_w}")
+        print(f"{BOLD}Top Processes ({len(self.processes)}){RESET}")
+        print(f"{BOLD}{YELLOW}  {'#':>{rank_w}}  {'PID':>{pid_w}}  {'PROCESS':<{name_w}}  {'TIME':>{time_w}}{RESET}")
+        print(f"{DIM}  {'-' * rank_w}  {'-' * pid_w}  {'-' * name_w}  {'-' * time_w}{RESET}")
         for rank, (name, pid, time) in enumerate(self.processes, start=1):
             if len(name) > name_w:
                 name = name[:name_w - 1] + "\u2026"
-            print(f"  {rank:>{rank_w}}  {pid:>{pid_w}}  {name:<{name_w}}  {time:>{time_w}}")
+            print(f"  {DIM}{rank:>{rank_w}}{RESET}  {BLUE}{pid:>{pid_w}}{RESET}  "
+                  f"{GREEN}{name:<{name_w}}{RESET}  {CYAN}{time:>{time_w}}{RESET}")
 
 
     def clear_processes(self):
