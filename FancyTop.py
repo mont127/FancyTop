@@ -4,6 +4,7 @@ import sys
 import os
 import select
 
+
 RED    = "\033[31m"
 GREEN  = "\033[32m"
 YELLOW = "\033[33m"
@@ -13,28 +14,27 @@ BOLD   = "\033[1m"
 DIM    = "\033[2m"
 REVERSE = "\033[7m"
 RESET  = "\033[0m"
+REFRESH_INTERVAL = 2
+
 
 class MainCLI():
     def __init__(self):
         self.processes = []
         self.selected = 0
         self.offset = 0
-        self.has_more = False
+        self.refresh_time = REFRESH_INTERVAL
 
     def get_terminal_size(self):
         size = shutil.get_terminal_size()
         return size.columns, size.lines
-    
 
-    
+    def visible_rows(self):
+        return max(1, self.get_terminal_size()[1] - 4)
+
     def get_top_processes(self):
         result = subprocess.run(['ps', '-arcxo', 'pid,command,time'], stdout=subprocess.PIPE)
-        cols, size = self.get_terminal_size()
-        all_lines = result.stdout.decode().strip().split('\n')
-        self.offset = max(0, min(self.offset, len(all_lines) - (size - 3)))
-        lines = all_lines[1 + self.offset:size - 3 + self.offset]
-        self.has_more = size - 3 + self.offset < len(all_lines)
-        for line in lines:
+        self.processes = []
+        for line in result.stdout.decode().strip().split('\n')[1:]:
             parts = line.strip().split(maxsplit=1)
             if len(parts) != 2:
                 continue
@@ -54,31 +54,35 @@ class MainCLI():
             self.render([f"{BOLD}Top Processes:{RESET}  {DIM}(none){RESET}"])
             return
         cols, lines = self.get_terminal_size()
-        rank_w = max(3, len(str(self.offset + len(self.processes))))
-        pid_w = max(3, max(len(pid) for _, pid, _ in self.processes))
+        rows = self.visible_rows()
+        self.offset = max(0, min(self.offset, len(self.processes) - rows))
+        if self.selected < self.offset:
+            self.offset = self.selected
+        elif self.selected >= self.offset + rows:
+            self.offset = self.selected - rows + 1
+        visible = self.processes[self.offset:self.offset + rows]
+
+        rank_w = max(3, len(str(self.offset + len(visible))))
+        pid_w = max(3, max(len(pid) for _, pid, _ in visible))
         time_w = 10
         name_w = max(20, cols - (8 + rank_w + pid_w + time_w))
 
         out = [
             f"{BOLD}Top Processes ({len(self.processes)}){RESET}",
-            f"{BOLD}{YELLOW}  {'#':>{rank_w}}  {'PID':>{pid_w}}  {'PROCESS':<{name_w}}  {'TIME':>{time_w}}{RESET}",
+            f"{BOLD}{YELLOW}  {'#':>{rank_w}}  {'PID':>{pid_w}}  {'PROCESS':<{name_w}}  {'TIME':>{time_w}}{RESET} REFRESH TIME {self.refresh_time} ",
             f"{DIM}  {'-' * rank_w}  {'-' * pid_w}  {'-' * name_w}  {'-' * time_w}{RESET}",
         ]
-        for i, (name, pid, time) in enumerate(self.processes):
+        for i, (name, pid, time) in enumerate(visible):
             rank = self.offset + i + 1
             if len(name) > name_w:
                 name = name[:name_w - 1] + "\u2026"
-            if i == self.selected:
+            if self.offset + i == self.selected:
                 out.append(f"{REVERSE}{BOLD}  {rank:>{rank_w}}  {pid:>{pid_w}}  "
                            f"{name:<{name_w}}  {time:>{time_w}}{RESET}")
             else:
                 out.append(f"  {DIM}{rank:>{rank_w}}{RESET}  {BLUE}{pid:>{pid_w}}{RESET}  "
                            f"{GREEN}{name:<{name_w}}{RESET}  {CYAN}{time:>{time_w}}{RESET}")
         self.render(out)
-
-
-    def clear_processes(self):
-        self.processes = []
 
     def read_key(self, timeout):
         fd = sys.stdin.fileno()
@@ -96,22 +100,29 @@ class MainCLI():
             self.move_right()
         elif key in (b'\x1b[D', b'\x1bOD'):
             self.move_left()
+        elif key == b' ':
+            self.press_space()
 
     def move_up(self):
         if self.selected > 0:
             self.selected -= 1
-        elif self.offset > 0:
-            self.offset -= 1
 
     def move_down(self):
         if self.selected < len(self.processes) - 1:
             self.selected += 1
-        elif self.has_more:
-            self.offset += 1
 
     def move_left(self):
-        pass
+        self.refresh_time = round(max(0.1, self.refresh_time + 0.1), 2)
 
     def move_right(self):
-        pass
+        self.refresh_time = round(max(0.1, self.refresh_time - 0.1), 2)
+
+    def press_space(self):
+        if self.selected < len(self.processes):
+            pid = self.processes[self.selected][1]
+            try:
+                os.kill(int(pid), 9)
+                print(f"{RED}Killed process {pid}{RESET}")
+            except Exception as e:
+                print(f"{RED}Failed to kill process {pid}: {e}{RESET}")
 

@@ -1,6 +1,7 @@
 from FancyTop import MainCLI
 import sys
 import termios
+import time
 import tty
 
 def main():
@@ -12,13 +13,16 @@ def main():
     tty.setcbreak(fd)
     sys.stdout.write("\033[?1049h\033[?25l\033[2J")
     try:
+        app.get_top_processes()
+        next_refresh = time.monotonic() + app.refresh_time
         while True:
-            app.clear_processes()
-            app.get_top_processes()
             app.display_processes()
-            key = app.read_key(0.3)
+            key = app.read_key(max(0, next_refresh - time.monotonic()))
             if key:
                 app.handle_key(key)
+            if time.monotonic() >= next_refresh:
+                app.get_top_processes()
+                next_refresh = time.monotonic() + app.refresh_time
     except KeyboardInterrupt:
         pass
     finally:
@@ -26,4 +30,6 @@ def main():
         sys.stdout.write("\033[?25h\033[?1049l")
         sys.stdout.flush()
     print("Exiting FancyTop...")
-main()
+
+if __name__ == "__main__":
+    main()
